@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# build
+dist/
+frontend/dist/
+
+# env
+.env
+
+# uploads
+uploads/
+
+# prisma generated
+node_modules/.prisma
+
+# OS
+.DS_Store

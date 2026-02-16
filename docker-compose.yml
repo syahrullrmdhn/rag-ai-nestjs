@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ragdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ragdb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ragdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    # jangan expose port ke host
+    # ports:
+    #   - "5432:5432"
+
+  app:
+    build:
+      context: .
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    # jalankan migrate deploy tiap start sebelum node dist/main
+    command: sh -lc "npx prisma@5.22.0 migrate deploy && node dist/main.js"
+
+volumes:
+  ragdb_data:
+

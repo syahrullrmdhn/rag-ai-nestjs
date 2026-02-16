@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RAG MVP — Sign In</title>
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'] },
+          boxShadow: {
+            soft: '0 10px 30px rgba(2, 44, 34, 0.10)',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen font-sans bg-gradient-to-b from-emerald-50 to-slate-50 text-slate-900">
+  <div class="min-h-screen flex">
+    <!-- Left: Brand / Preview -->
+    <div class="hidden lg:flex w-[46%] p-10">
+      <div class="w-full rounded-3xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-soft overflow-hidden relative">
+        <div class="absolute inset-0 opacity-25"
+             style="background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35), transparent 45%),
+                    radial-gradient(circle at 80% 10%, rgba(255,255,255,0.25), transparent 40%),
+                    radial-gradient(circle at 70% 80%, rgba(255,255,255,0.18), transparent 45%);"></div>
+
+        <div class="relative p-10 flex flex-col h-full">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-2xl bg-white/15 ring-1 ring-white/20 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5">
+                <path d="M7 8h10M7 12h10M7 16h7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="text-lg font-semibold">RAG NestJS + Telegram</div>
+          </div>
+
+          <div class="mt-10">
+            <div class="text-3xl font-semibold leading-tight">
+              Knowledge-driven chat<br/>
+              for web + Telegram
+            </div>
+            <p class="mt-4 text-white/80 max-w-md">
+              Upload knowledge, embed, retrieve, and answer with sources. Minimal, fast, and deployable.
+            </p>
+          </div>
+
+          <div class="mt-auto grid grid-cols-2 gap-4">
+            <div class="rounded-2xl bg-white/10 ring-1 ring-white/15 p-5">
+              <div class="text-sm text-white/75">Status</div>
+              <div class="mt-2 text-xl font-semibold">MVP Online</div>
+              <div class="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+                <div class="h-full w-3/5 bg-white/60"></div>
+              </div>
+              <div class="mt-2 text-xs text-white/70">RAG pipeline ready</div>
+            </div>
+            <div class="rounded-2xl bg-white/10 ring-1 ring-white/15 p-5">
+              <div class="text-sm text-white/75">Security</div>
+              <div class="mt-2 text-xl font-semibold">JWT Guard</div>
+              <div class="mt-2 text-xs text-white/70">Auth endpoints protected</div>
+            </div>
+          </div>
+
+          <div class="mt-6 text-xs text-white/60">
+            Tip: use a strong JWT_SECRET in .env
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Login -->
+    <div class="flex-1 flex items-center justify-center px-6 py-10">
+      <div class="w-full max-w-md">
+        <div class="bg-white/80 backdrop-blur rounded-3xl shadow-soft ring-1 ring-slate-200 p-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-2xl font-semibold">Sign in</div>
+              <div class="text-sm text-slate-500 mt-1">Access your dashboard and knowledge base</div>
+            </div>
+            <div class="h-11 w-11 rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5 text-emerald-700">
+                <path d="M12 2l7 4v6c0 5-3 9-7 10C8 21 5 17 5 12V6l7-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <div id="alert" class="hidden mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+          <form id="form" class="mt-6 space-y-4">
+            <div>
+              <label class="text-sm font-medium text-slate-700">Email</label>
+              <input id="email" type="email" autocomplete="email"
+                     class="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                     placeholder="admin@local" required>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium text-slate-700">Password</label>
+              <input id="password" type="password" autocomplete="current-password"
+                     class="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                     placeholder="••••••••" required>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-sm text-slate-600 select-none">
+                <input id="remember" type="checkbox" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-200">
+                Remember me
+              </label>
+              <button type="button" id="fillDemo" class="text-sm font-medium text-emerald-700 hover:text-emerald-800">
+                Fill demo
+              </button>
+            </div>
+
+            <button id="btnLogin" type="submit"
+                    class="w-full rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white py-3 text-sm font-semibold shadow-sm">
+              Login
+            </button>
+
+            <button id="btnRegister" type="button"
+                    class="w-full rounded-2xl bg-white hover:bg-slate-50 text-slate-800 py-3 text-sm font-semibold border border-slate-200">
+              Register new account
+            </button>
+          </form>
+
+          <div class="mt-6 text-xs text-slate-500">
+            By continuing, you understand this is an MVP. Don’t expose OpenAI keys on public machines.
+          </div>
+        </div>
+
+        <div class="mt-6 text-center text-xs text-slate-500">
+          <span class="font-medium">RAG MVP</span> • NestJS • Prisma • Postgres • LangChain
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function showError(msg) {
+    const a = $('alert');
+    a.textContent = msg;
+    a.classList.remove('hidden');
+  }
+  function clearError() { $('alert').classList.add('hidden'); $('alert').textContent=''; }
+
+  function api(path) { return path; } // same-origin
+
+  async function login(email, password) {
+    const res = await fetch(api('/auth/login'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || data?.error || 'Login failed');
+    return data.accessToken;
+  }
+
+  async function register(email, password) {
+    const res = await fetch(api('/auth/register'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || data?.error || 'Register failed');
+    return true;
+  }
+
+  function setToken(token, remember) {
+    if (remember) localStorage.setItem('jwt', token);
+    else sessionStorage.setItem('jwt', token);
+  }
+
+  function getToken() {
+    return sessionStorage.getItem('jwt') || localStorage.getItem('jwt');
+  }
+
+  // Auto-redirect if already logged in
+  (async () => {
+    const t = getToken();
+    if (!t) return;
+    // quick verify
+    const res = await fetch(api('/auth/me'), { headers: { authorization: 'Bearer ' + t } });
+    if (res.ok) window.location.href = '/dashboard.html';
+  })();
+
+  $('fillDemo').addEventListener('click', () => {
+    $('email').value = 'admin@local';
+    $('password').value = 'admin123';
+  });
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    $('btnLogin').disabled = true;
+    try {
+      const token = await login($('email').value.trim(), $('password').value);
+      setToken(token, $('remember').checked);
+      window.location.href = '/dashboard.html';
+    } catch (err) {
+      showError(err?.message || String(err));
+    } finally {
+      $('btnLogin').disabled = false;
+    }
+  });
+
+  $('btnRegister').addEventListener('click', async () => {
+    clearError();
+    $('btnRegister').disabled = true;
+    try {
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      if (!email || !password) throw new Error('Email & password required');
+      await register(email, password);
+      const token = await login(email, password);
+      setToken(token, $('remember').checked);
+      window.location.href = '/dashboard.html';
+    } catch (err) {
+      showError(err?.message || String(err));
+    } finally {
+      $('btnRegister').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

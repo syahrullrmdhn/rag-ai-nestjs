@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RAG MVP — Dashboard</title>
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'] },
+          boxShadow: { soft: '0 10px 30px rgba(2, 44, 34, 0.10)' }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="min-h-screen font-sans bg-gradient-to-b from-emerald-50 to-slate-50 text-slate-900">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-[280px] hidden lg:flex flex-col p-6">
+      <div class="rounded-3xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 text-white shadow-soft ring-1 ring-white/10 overflow-hidden">
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-11 w-11 rounded-2xl bg-white/15 ring-1 ring-white/20 flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5">
+                  <path d="M7 8h10M7 12h10M7 16h7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm text-white/70">Workspace</div>
+                <div class="text-lg font-semibold">RAG MVP</div>
+              </div>
+            </div>
+            <button id="btnLogoutSide" class="rounded-2xl bg-white/10 hover:bg-white/15 ring-1 ring-white/15 px-3 py-2 text-xs font-semibold">
+              Logout
+            </button>
+          </div>
+
+          <nav class="mt-6 space-y-2 text-sm">
+            <a href="#overview" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 bg-white/10 ring-1 ring-white/15">
+              <span class="h-2 w-2 rounded-full bg-white/70"></span>
+              Overview
+            </a>
+            <a href="#settings" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/10 ring-1 ring-transparent hover:ring-white/15">
+              <span class="h-2 w-2 rounded-full bg-white/50"></span>
+              Settings
+            </a>
+            <a href="#knowledge" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/10 ring-1 ring-transparent hover:ring-white/15">
+              <span class="h-2 w-2 rounded-full bg-white/50"></span>
+              Knowledge
+            </a>
+            <a href="#chat" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/10 ring-1 ring-transparent hover:ring-white/15">
+              <span class="h-2 w-2 rounded-full bg-white/50"></span>
+              Chat
+            </a>
+            <a href="#telegram" class="nav-link flex items-center gap-3 rounded-2xl px-4 py-3 hover:bg-white/10 ring-1 ring-transparent hover:ring-white/15">
+              <span class="h-2 w-2 rounded-full bg-white/50"></span>
+              Telegram
+            </a>
+          </nav>
+        </div>
+
+        <div class="p-6 pt-0">
+          <div class="rounded-2xl bg-white/10 ring-1 ring-white/15 p-5">
+            <div class="text-xs text-white/70">Status</div>
+            <div class="mt-2 text-xl font-semibold" id="statusText">Ready</div>
+            <div class="mt-3 h-2 rounded-full bg-white/10 overflow-hidden">
+              <div class="h-full w-2/3 bg-white/60"></div>
+            </div>
+            <div class="mt-2 text-xs text-white/70">Backend + DB running</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6 lg:p-10">
+      <!-- Top bar -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="text-sm text-slate-500">Dashboard</div>
+          <h1 class="text-2xl md:text-3xl font-semibold">RAG NestJS + Telegram</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="hidden md:flex items-center gap-2 rounded-2xl bg-white/70 ring-1 ring-slate-200 px-4 py-3 shadow-sm">
+            <span class="text-xs text-slate-500">Logged in as</span>
+            <span id="meEmail" class="text-sm font-semibold">—</span>
+          </div>
+          <button id="btnLogoutTop" class="lg:hidden rounded-2xl bg-white hover:bg-slate-50 text-slate-800 px-4 py-3 text-sm font-semibold border border-slate-200">
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- Overview cards -->
+      <section id="overview" class="mt-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm text-slate-500">Documents</div>
+              <div class="mt-2 text-3xl font-semibold" id="docCount">—</div>
+            </div>
+            <div class="h-12 w-12 rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 text-emerald-700">
+                <path d="M7 3h7l3 3v15H7V3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M14 3v6h6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4 text-sm text-slate-600">Indexed knowledge available for retrieval.</div>
+        </div>
+
+        <div class="rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm text-slate-500">Settings</div>
+              <div class="mt-2 text-3xl font-semibold" id="settingsState">—</div>
+            </div>
+            <div class="h-12 w-12 rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 text-emerald-700">
+                <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="2"/>
+                <path d="M19.4 15a7.8 7.8 0 0 0 .1-6l-2.1.8a6 6 0 0 0-1.3-1.3l.8-2.1a7.8 7.8 0 0 0-6-.1l.8 2.1a6 6 0 0 0-1.3 1.3l-2.1-.8a7.8 7.8 0 0 0-.1 6l2.1-.8a6 6 0 0 0 1.3 1.3l-.8 2.1a7.8 7.8 0 0 0 6 .1l-.8-2.1a6 6 0 0 0 1.3-1.3l2.1.8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4 text-sm text-slate-600">OpenAI model & Telegram token.</div>
+        </div>
+
+        <div class="rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm text-slate-500">RAG Activity</div>
+              <div class="mt-2 text-3xl font-semibold" id="ragState">—</div>
+            </div>
+            <div class="h-12 w-12 rounded-2xl bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6 text-emerald-700">
+                <path d="M4 17l6-6 4 4 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 7v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="mt-4">
+            <canvas id="chart" height="72"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section id="settings" class="mt-10">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Settings</h2>
+          <div class="text-sm text-slate-500">Protected</div>
+        </div>
+
+        <div class="mt-4 rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div>
+              <div class="text-sm font-semibold">JSON</div>
+              <div class="text-xs text-slate-500 mt-1">Edit then Save (PUT). Use server-side values only.</div>
+              <textarea id="settingsJson"
+                        class="mt-3 w-full h-56 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-mono outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                        placeholder='{"openaiApiKey":"...","chatModel":"gpt-4.1-mini","embeddingModel":"text-embedding-3-large","telegramBotToken":"...","telegramBotUsername":"..."}'></textarea>
+              <div class="mt-4 flex gap-3">
+                <button id="btnSettingsLoad" class="rounded-2xl bg-white hover:bg-slate-50 text-slate-800 px-4 py-3 text-sm font-semibold border border-slate-200">
+                  Load
+                </button>
+                <button id="btnSettingsSave" class="rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-3 text-sm font-semibold">
+                  Save (PUT)
+                </button>
+              </div>
+              <div id="settingsMsg" class="mt-3 text-sm text-slate-600"></div>
+            </div>
+
+            <div class="rounded-2xl bg-emerald-50/60 ring-1 ring-emerald-100 p-5">
+              <div class="text-sm font-semibold text-emerald-900">Notes</div>
+              <ul class="mt-3 space-y-2 text-sm text-emerald-900/80 list-disc pl-5">
+                <li>Don’t expose OpenAI keys on shared/public devices.</li>
+                <li>Telegram webhook needs HTTPS public URL.</li>
+                <li>RAG won’t answer well if knowledge is empty.</li>
+              </ul>
+              <div class="mt-6 rounded-2xl bg-white/70 ring-1 ring-emerald-100 p-4">
+                <div class="text-xs text-emerald-800">Server</div>
+                <div class="mt-1 text-sm font-semibold text-emerald-900" id="serverBase">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Knowledge -->
+      <section id="knowledge" class="mt-10">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Knowledge</h2>
+          <button id="btnRefreshDocs" class="rounded-2xl bg-white hover:bg-slate-50 text-slate-800 px-4 py-3 text-sm font-semibold border border-slate-200">
+            Refresh
+          </button>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div class="rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+            <div class="text-sm font-semibold">Add Text</div>
+            <div class="text-xs text-slate-500 mt-1">Fast ingestion for MVP.</div>
+
+            <input id="kTitle" class="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                   placeholder="Title" />
+
+            <textarea id="kContent"
+                      class="mt-3 w-full h-44 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                      placeholder="Paste knowledge text here..."></textarea>
+
+            <div class="mt-4 flex gap-3">
+              <button id="btnAddText" class="rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-3 text-sm font-semibold">
+                Ingest Text
+              </button>
+              <div id="kMsg" class="text-sm text-slate-600 self-center"></div>
+            </div>
+          </div>
+
+          <div class="rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+            <div class="text-sm font-semibold">Documents</div>
+            <div class="text-xs text-slate-500 mt-1">Stored in Postgres (metadata). Vector store is in-memory MVP.</div>
+            <div id="docsList" class="mt-4 space-y-3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chat -->
+      <section id="chat" class="mt-10">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Chat</h2>
+          <div class="text-sm text-slate-500">JWT protected</div>
+        </div>
+
+        <div class="mt-4 rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div id="chatBox" class="h-80 overflow-auto rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 space-y-3"></div>
+
+          <div class="mt-4 flex gap-3">
+            <input id="chatInput"
+                   class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300"
+                   placeholder="Ask a question..." />
+            <button id="btnChat"
+                    class="rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white px-5 py-3 text-sm font-semibold">
+              Send
+            </button>
+          </div>
+
+          <div id="chatMsg" class="mt-3 text-sm text-slate-600"></div>
+        </div>
+      </section>
+
+      <!-- Telegram -->
+      <section id="telegram" class="mt-10 pb-10">
+        <h2 class="text-lg font-semibold">Telegram</h2>
+        <div class="mt-4 rounded-3xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200 p-6">
+          <div class="text-sm text-slate-700">Webhook endpoint:</div>
+          <div class="mt-2 rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-4 py-3 text-sm font-mono">
+            POST /telegram/webhook
+          </div>
+          <div class="mt-4 text-sm text-slate-600">
+            Telegram requires <span class="font-semibold">HTTPS public URL</span>. If you’re still HTTP, use Nginx+Certbot or Cloudflare Tunnel.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function api(path) { return path; }
+  function token() { return sessionStorage.getItem('jwt') || localStorage.getItem('jwt'); }
+  function authHeaders() { return { authorization: 'Bearer ' + token() }; }
+
+  function logout() {
+    sessionStorage.removeItem('jwt');
+    localStorage.removeItem('jwt');
+    window.location.href = '/';
+  }
+
+  $('btnLogoutTop').addEventListener('click', logout);
+  $('btnLogoutSide').addEventListener('click', logout);
+
+  function bubble(role, text) {
+    const isUser = role === 'user';
+    const wrap = document.createElement('div');
+    wrap.className = 'flex ' + (isUser ? 'justify-end' : 'justify-start');
+
+    const b = document.createElement('div');
+    b.className = (isUser
+      ? 'max-w-[80%] rounded-2xl bg-emerald-700 text-white px-4 py-3 text-sm shadow-sm'
+      : 'max-w-[80%] rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-3 text-sm text-slate-800 shadow-sm');
+    b.textContent = text;
+
+    wrap.appendChild(b);
+    return wrap;
+  }
+
+  async function ensureAuth() {
+    const t = token();
+    if (!t) { window.location.href = '/'; return; }
+    const res = await fetch(api('/auth/me'), { headers: authHeaders() });
+    if (!res.ok) { logout(); return; }
+    const me = await res.json().catch(() => ({}));
+    $('meEmail').textContent = me?.email || '—';
+  }
+
+  async function loadSettings() {
+    $('settingsMsg').textContent = 'Loading...';
+    const res = await fetch(api('/settings'), { headers: authHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { $('settingsMsg').textContent = data?.message || 'Failed to load settings'; return; }
+    $('settingsJson').value = JSON.stringify(data, null, 2);
+    $('settingsMsg').textContent = 'Loaded.';
+    const ok = (data?.openaiApiKey || data?.openai_api_key) ? 'Configured' : 'Empty';
+    $('settingsState').textContent = ok;
+  }
+
+  async function saveSettings() {
+    $('settingsMsg').textContent = 'Saving...';
+    let payload;
+    try { payload = JSON.parse($('settingsJson').value || '{}'); }
+    catch { $('settingsMsg').textContent = 'Invalid JSON'; return; }
+
+    const res = await fetch(api('/settings'), {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { $('settingsMsg').textContent = data?.message || 'Failed to save'; return; }
+    $('settingsJson').value = JSON.stringify(data, null, 2);
+    $('settingsMsg').textContent = 'Saved.';
+    const ok = (data?.openaiApiKey || data?.openai_api_key) ? 'Configured' : 'Empty';
+    $('settingsState').textContent = ok;
+  }
+
+  function docRow(doc) {
+    const el = document.createElement('div');
+    el.className = 'rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 flex items-start justify-between gap-4';
+    const left = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'text-sm font-semibold text-slate-800';
+    title.textContent = doc.title || '(untitled)';
+
+    const meta = document.createElement('div');
+    meta.className = 'mt-1 text-xs text-slate-500';
+    meta.textContent = `${doc.type || '—'} • ${doc.status || '—'} • ${doc.createdAt || doc.created_at || ''}`;
+
+    left.appendChild(title);
+    left.appendChild(meta);
+
+    const badge = document.createElement('div');
+    const status = (doc.status || '').toLowerCase();
+    badge.className = 'shrink-0 text-xs font-semibold px-3 py-1 rounded-full ' + (
+      status === 'indexed' ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200'
+                           : 'bg-amber-100 text-amber-800 ring-1 ring-amber-200'
+    );
+    badge.textContent = doc.status || '—';
+
+    el.appendChild(left);
+    el.appendChild(badge);
+    return el;
+  }
+
+  async function refreshDocs() {
+    const box = $('docsList');
+    box.innerHTML = '';
+    const res = await fetch(api('/knowledge'), { headers: authHeaders() });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      box.innerHTML = '<div class="text-sm text-rose-700">Failed to load documents</div>';
+      $('docCount').textContent = '—';
+      return;
+    }
+    $('docCount').textContent = Array.isArray(data) ? String(data.length) : '0';
+    if (!Array.isArray(data) || data.length === 0) {
+      box.innerHTML = '<div class="text-sm text-slate-500">No documents yet.</div>';
+      return;
+    }
+    data.slice().reverse().forEach(d => box.appendChild(docRow(d)));
+  }
+
+  async function ingestText() {
+    $('kMsg').textContent = 'Ingesting...';
+    const title = $('kTitle').value.trim() || 'Untitled';
+    const content = $('kContent').value.trim();
+    if (!content) { $('kMsg').textContent = 'Content is empty.'; return; }
+
+    const res = await fetch(api('/knowledge/text'), {
+      method: 'POST',
+      headers: { ...authHeaders(), 'content-type': 'application/json' },
+      body: JSON.stringify({ title, content })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { $('kMsg').textContent = data?.message || 'Failed'; return; }
+    $('kMsg').textContent = 'Done.';
+    $('kContent').value = '';
+    await refreshDocs();
+  }
+
+  async function sendChat() {
+    $('chatMsg').textContent = '';
+    const q = $('chatInput').value.trim();
+    if (!q) return;
+
+    const chatBox = $('chatBox');
+    chatBox.appendChild(bubble('user', q));
+    chatBox.scrollTop = chatBox.scrollHeight;
+    $('chatInput').value = '';
+
+    $('btnChat').disabled = true;
+    try {
+      const res = await fetch(api('/chat'), {
+        method: 'POST',
+        headers: { ...authHeaders(), 'content-type': 'application/json' },
+        body: JSON.stringify({ message: q })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || 'Chat failed');
+      const ans = data?.answer || data?.text || JSON.stringify(data);
+      chatBox.appendChild(bubble('assistant', ans));
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      $('ragState').textContent = 'Active';
+    } catch (e) {
+      $('chatMsg').textContent = e?.message || String(e);
+      $('ragState').textContent = 'Error';
+    } finally {
+      $('btnChat').disabled = false;
+    }
+  }
+
+  $('btnSettingsLoad').addEventListener('click', loadSettings);
+  $('btnSettingsSave').addEventListener('click', saveSettings);
+  $('btnRefreshDocs').addEventListener('click', refreshDocs);
+  $('btnAddText').addEventListener('click', ingestText);
+  $('btnChat').addEventListener('click', sendChat);
+  $('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+
+  // chart (dummy, just for UI feel)
+  const ctx = document.getElementById('chart');
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [
+        { label: 'Queries', data: [2,4,3,6,5,3,4] },
+        { label: 'Ingest', data: [1,1,0,2,1,0,1] }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.06)' } } }
+    }
+  });
+
+  // init
+  (async () => {
+    $('serverBase').textContent = window.location.origin;
+    await ensureAuth();
+    await loadSettings();
+    await refreshDocs();
+    $('ragState').textContent = 'Idle';
+  })();
+</script>
+</body>
+</html>

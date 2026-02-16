@@ -1,0 +1,5 @@
+ALTER TABLE "documents"
+ADD COLUMN IF NOT EXISTS "progress" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "documents"
+ADD COLUMN IF NOT EXISTS "error_message" TEXT;

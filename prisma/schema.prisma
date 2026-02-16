@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  documents Document[]
+}
+
+model Settings {
+  id                  Int      @id @default(1)
+  openaiApiKey        String?  @map("openai_api_key")
+  chatModel           String?  @map("chat_model")
+  embeddingModel      String?  @map("embedding_model")
+  telegramBotToken    String?  @map("telegram_bot_token")
+  telegramBotUsername String?  @map("telegram_bot_username")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  title        String
+  type         String // "file" | "text"
+  sourcePath   String?  @map("source_path")
+  status       String // "pending" | "indexing" | "indexed" | "failed"
+  progress     Int      @default(0)
+  errorMessage String?  @map("error_message")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("documents")
+}
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  userId    String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
