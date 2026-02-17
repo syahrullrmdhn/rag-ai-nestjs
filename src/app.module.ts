@@ -15,11 +15,12 @@ import { TelegramModule } from './telegram/telegram.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // IMPORTANT: use process.cwd() so path is correct in Docker runtime (/app)
+    // Serve file statis dari folder public
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'public', 'app'),
-      serveRoot: '/',
-      exclude: ['/auth*', '/settings*', '/knowledge*', '/chat*', '/telegram*'],
+      rootPath: join(process.cwd(), 'public'),
+      serveRoot: '/', 
+      // Penting: Exclude /api agar tidak bentrok
+      exclude: ['/api/(.*)'], 
     }),
 
     PrismaModule,
@@ -30,5 +31,7 @@ import { TelegramModule } from './telegram/telegram.module';
     ChatModule,
     TelegramModule,
   ],
+  controllers: [], // Pastikan AppController DIHAPUS dari sini
+  providers: [],
 })
 export class AppModule {}

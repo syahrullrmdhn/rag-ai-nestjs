@@ -1,7 +1,8 @@
 // frontend/src/lib/api.ts
 import { clearToken, getToken } from "./auth";
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE || ""; // kosong = same origin
+// PERUBAHAN DISINI: Default base url kita ubah jadi "/api"
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || "/api"; 
 
 type ApiError = { status: number; message: string; data?: any };
 
@@ -15,7 +16,11 @@ export async function apiFetch<T = any>(
   path: string,
   opts: RequestInit & { auth?: boolean } = {},
 ): Promise<T> {
-  const url = path.startsWith("http") ? path : `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+  // Logic penggabungan URL
+  const url = path.startsWith("http") 
+    ? path 
+    : `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+
   const headers = new Headers(opts.headers || {});
   const wantsAuth = opts.auth !== false; // default true
   if (wantsAuth) {
@@ -33,8 +38,11 @@ export async function apiFetch<T = any>(
 
   if (res.status === 401) {
     clearToken();
-    // biar UX rapi: lempar error, page guard bakal redirect
     const data = await parseJsonSafe(res);
+    // Redirect ke login jika session habis (client side)
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+       window.location.href = '/login';
+    }
     const err: ApiError = { status: 401, message: "Unauthorized", data };
     throw err;
   }

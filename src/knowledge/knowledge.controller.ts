@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Req,
   Body,
@@ -23,11 +24,36 @@ function getUserId(req: any): string {
   return id;
 }
 
-function ensureUploadsDir() {
-  const dir = path.join(process.cwd(), 'uploads');
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
+// Definisikan path upload secara global di file ini
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+
+// Konfigurasi Multer yang lebih Robust dengan Logging
+const multerOptions = {
+  storage: diskStorage({
+    destination: (req, file, cb) => {
+      // Cek apakah folder ada
+      if (!fs.existsSync(UPLOAD_DIR)) {
+        console.log(`[Multer] Directory missing. Creating: ${UPLOAD_DIR}`);
+        try {
+          fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        } catch (e) {
+          console.error('[Multer] Failed to create directory:', e);
+          return cb(e as Error, '');
+        }
+      }
+      cb(null, UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+      // Sanitasi nama file agar aman
+      const safeName = String(file.originalname || 'upload.bin')
+        .replace(/\s+/g, '_') // Ganti spasi dengan underscore
+        .replace(/[^\w.\-]+/g, ''); // Hapus karakter aneh
+      const finalName = `${Date.now()}_${safeName}`;
+      cb(null, finalName);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limit 50MB
+};
 
 @Controller('knowledge')
 @UseGuards(JwtAuthGuard)
@@ -50,25 +76,22 @@ export class KnowledgeController {
   }
 
   /**
-   * Upload file => auto-index (langsung proses)
-   * Jika mau behavior lama (pending), ubah return ke `return doc;`
+   * Upload file => auto-index
+   * Menggunakan konfigurasi multerOptions yang sudah diperbaiki
    */
   @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => cb(null, ensureUploadsDir()),
-        filename: (_req, file, cb) => {
-          const safe = String(file.originalname || 'upload.bin').replace(/[^\w.\-]+/g, '_');
-          cb(null, `${Date.now()}_${safe}`);
-        },
-      }),
-      limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', multerOptions))
   async upload(@Req() req: any, @UploadedFile() file: any) {
     const userId = getUserId(req);
-    if (!file) throw new BadRequestException('File wajib dipilih');
+    
+    // --- DEBUG LOGGING ---
+    console.log('[Upload Controller] File object received:', file);
+    // ---------------------
+
+    if (!file) {
+      console.error('[Upload Controller] Error: File is undefined/null');
+      throw new BadRequestException('File wajib dipilih. Cek permission folder uploads.');
+    }
 
     // create doc (pending)
     const doc = await this.knowledge.createFromFile(userId, file);
@@ -82,5 +105,12 @@ export class KnowledgeController {
   async indexOne(@Req() req: any, @Param('id') id: string) {
     const userId = getUserId(req);
     return this.knowledge.indexFile(userId, id);
+  }
+
+  // --- DELETE ENDPOINT ---
+  @Delete(':id')
+  async delete(@Req() req: any, @Param('id') id: string) {
+    const userId = getUserId(req);
+    return this.knowledge.delete(userId, id);
   }
 }

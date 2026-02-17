@@ -14,13 +14,11 @@ export class KnowledgeService {
   async list(userId: string) {
     if (!userId) throw new BadRequestException('userId missing');
     try {
-      // sekarang aman karena DB sudah dipaksa punya kolom progress via migration
       return await this.prisma.document.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
       });
     } catch (e: any) {
-      // jangan lempar 500 mentah tanpa konteks
       throw new InternalServerErrorException(e?.message || 'Failed to load documents');
     }
   }
@@ -42,9 +40,7 @@ export class KnowledgeService {
 
     try {
       await this.prisma.document.update({ where: { id: doc.id }, data: { progress: 35 } });
-
       await this.rag.ingestRawText(doc.id, (text || '').trim(), doc.title);
-
       return await this.prisma.document.update({
         where: { id: doc.id },
         data: { status: 'indexed', progress: 100, errorMessage: null },
@@ -100,7 +96,7 @@ export class KnowledgeService {
     if (doc.type !== 'file') throw new BadRequestException('Only file documents can be indexed');
     if (!doc.sourcePath) throw new BadRequestException('sourcePath missing');
 
-    // hindari indexing dobel
+    // hindari indexing dobel jika sedang berjalan atau sudah selesai
     if (doc.status === 'indexing' || doc.status === 'indexed') return doc;
 
     const abs = path.isAbsolute(doc.sourcePath)
@@ -131,7 +127,6 @@ export class KnowledgeService {
       if (!text) throw new Error('No text extracted from file');
 
       await this.prisma.document.update({ where: { id: doc.id }, data: { progress: 45 } });
-
       await this.rag.ingestRawText(doc.id, text, doc.title);
 
       return await this.prisma.document.update({
@@ -144,5 +139,38 @@ export class KnowledgeService {
         data: { status: 'failed' as DocStatus, progress: 0, errorMessage: String(e?.message || e) },
       });
     }
+  }
+
+  // --- DELETE METHOD ---
+  async delete(userId: string, documentId: string) {
+    if (!userId) throw new BadRequestException('userId missing');
+
+    // Cek kepemilikan dokumen
+    const doc = await this.prisma.document.findFirst({
+      where: { id: documentId, userId },
+    });
+
+    if (!doc) throw new BadRequestException('Document not found or access denied');
+
+    // 1. Hapus file fisik jika ada
+    if (doc.type === 'file' && doc.sourcePath) {
+      const absPath = path.isAbsolute(doc.sourcePath)
+        ? doc.sourcePath
+        : path.join(process.cwd(), doc.sourcePath);
+      
+      try {
+        if (fs.existsSync(absPath)) {
+          fs.unlinkSync(absPath);
+        }
+      } catch (e) {
+        console.warn(`Failed to delete file ${absPath}:`, e);
+        // Lanjut hapus database meski file gagal dihapus (supaya tidak stuck)
+      }
+    }
+
+    // 2. Hapus record DB
+    return await this.prisma.document.delete({
+      where: { id: documentId },
+    });
   }
 }
