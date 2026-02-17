@@ -10,8 +10,10 @@ import {
   Paperclip, 
   File, 
   X,
-  Trash2, // Icon sampah untuk clear history
-  RotateCcw // Icon refresh/loading
+  RotateCcw,
+  PlusCircle,
+  MessageSquare,
+  Zap
 } from "lucide-react";
 import { Button } from "../components/ui";
 
@@ -29,7 +31,7 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // --- 1. LOAD HISTORY SAAT HALAMAN DIBUKA ---
+  // --- 1. LOAD HISTORY ---
   useEffect(() => {
     loadHistory();
   }, []);
@@ -37,7 +39,6 @@ export default function ChatPage() {
   async function loadHistory() {
     setLoadingHistory(true);
     try {
-      // Panggil endpoint GET /api/chat
       const history = await apiFetch<Msg[]>("/chat", { method: "GET" });
       if (Array.isArray(history)) {
         setMsgs(history);
@@ -49,14 +50,22 @@ export default function ChatPage() {
     }
   }
 
-  // --- 2. FUNGSI HAPUS HISTORY ---
-  async function clearHistory() {
-    if(!confirm("Are you sure you want to clear all chat history?")) return;
+  // --- 2. NEW CHAT (CLEAR HISTORY) ---
+  async function startNewChat() {
+    if (msgs.length === 0) return; 
+    
+    if(!confirm("Start a new chat? This will clear current conversation history.")) return;
+    
     try {
-        await apiFetch("/chat", { method: "DELETE" });
-        setMsgs([]); // Kosongkan UI
+        setBusy(true); 
+        await apiFetch("/chat", { method: "DELETE" }); 
+        setMsgs([]); 
+        setQ("");
+        setSelectedFile(null);
     } catch(e) {
-        alert("Failed to clear history");
+        alert("Failed to start new chat");
+    } finally {
+        setBusy(false);
     }
   }
 
@@ -78,7 +87,7 @@ export default function ChatPage() {
     setErr("");
     setBusy(true);
     
-    // Optimistic Update: Tampilkan pesan user langsung di UI
+    // Optimistic Update
     let displayMsg = text;
     if (selectedFile) {
         displayMsg = text ? `[Uploaded ${selectedFile.name}] \n${text}` : `[Uploaded ${selectedFile.name}]`;
@@ -89,32 +98,23 @@ export default function ChatPage() {
     setQ(""); 
     
     try {
-      // Step A: Upload File ke Knowledge Base (Jika ada)
       if (selectedFile) {
         setStatusText("Uploading & Indexing document...");
         const formData = new FormData();
         formData.append('file', selectedFile);
-        
-        // Upload ke endpoint /api/knowledge/upload
         await apiFetch("/knowledge/upload", { method: "POST", body: formData });
-        
-        // Reset state file
         setSelectedFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
 
-      // Step B: Kirim Pesan Chat
       setStatusText("Thinking...");
-      
       const finalMessage = text || `I have uploaded a document named ${selectedFile?.name}. Please analyze it.`;
 
-      // Kirim ke endpoint /api/chat (akan disimpan ke DB oleh backend)
       const res = await apiFetch<{ answer: string }>("/chat", { 
         method: "POST", 
         body: JSON.stringify({ message: finalMessage }) 
       });
 
-      // Tambahkan balasan bot ke UI
       setMsgs((m) => [...m, { role: "assistant", text: res.answer || "No response." }]);
     } catch (e: any) {
       setErr(e?.message || "Connection failed.");
@@ -132,78 +132,92 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-8rem)] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
       
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <div className="flex items-center gap-2">
-          <Sparkles className="text-emerald-600" size={18} />
-          <span className="font-semibold text-slate-700">RAG Assistant</span>
+      {/* Header - Clean Style */}
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={startNewChat}
+              disabled={msgs.length === 0 || busy}
+              className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 gap-2 h-10 px-4 rounded-full transition-colors"
+          >
+              <PlusCircle size={18} />
+              <span className="font-medium">New chat</span>
+          </Button>
         </div>
-        <div className="flex items-center gap-3">
-            <div className="text-xs text-slate-400 hidden sm:block">GPT-4.1-mini</div>
-            {/* Tombol Clear History (Hanya muncul jika ada pesan) */}
-            {msgs.length > 0 && (
-                <button 
-                    onClick={clearHistory} 
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all" 
-                    title="Clear Chat History"
-                >
-                    <Trash2 size={16} />
-                </button>
-            )}
+        
+        {/* Branding Title */}
+        <div className="flex items-center gap-2 text-slate-500">
+          <Zap size={16} className="text-emerald-600 fill-current"/>
+          <span className="font-semibold text-sm text-slate-700">RAG AI Assistant</span>
         </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-8 scroll-smooth bg-slate-50/30">
         {loadingHistory ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
-                <RotateCcw size={24} className="animate-spin" />
-                <span className="text-sm">Loading history...</span>
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3 animate-pulse">
+                <RotateCcw size={24} className="animate-spin text-slate-300" />
+                <span className="text-xs font-medium">Restoring conversation...</span>
             </div>
         ) : msgs.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-              <Bot size={32} className="text-slate-400" />
+          <div className="h-full flex flex-col items-center justify-center text-center opacity-100 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-100 to-cyan-50 rounded-3xl flex items-center justify-center mb-6 shadow-md">
+              <Sparkles size={40} className="text-emerald-600" />
             </div>
-            <h3 className="text-lg font-medium text-slate-900">How can I help you?</h3>
-            <p className="text-sm text-slate-500 max-w-xs mt-2">
-              Ask questions or attach documents. Your chat history is saved automatically.
+            <h3 className="text-2xl font-semibold text-slate-800 mb-3">Hello, Human.</h3>
+            <p className="text-slate-500 max-w-sm leading-relaxed text-base">
+              I'm your RAG assistant. Upload documents to train me, then ask anything.
             </p>
+            
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
+                <button onClick={() => setQ("Summarize the last uploaded document")} className="p-4 text-sm text-left bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-md rounded-xl transition-all text-slate-600 flex items-center gap-3">
+                    <MessageSquare size={18} className="text-emerald-500" /> Summarize document
+                </button>
+                <button onClick={() => setQ("What are the key takeaways?")} className="p-4 text-sm text-left bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-md rounded-xl transition-all text-slate-600 flex items-center gap-3">
+                    <File size={18} className="text-emerald-500" /> Key takeaways
+                </button>
+            </div>
           </div>
         ) : (
           msgs.map((m, i) => (
-            <div key={i} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`flex max-w-[80%] gap-3 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+            <div key={i} className={`flex w-full ${m.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+              <div className={`flex max-w-[85%] sm:max-w-[75%] gap-4 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                
                 {/* Avatar */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  m.role === "user" ? "bg-slate-900 text-white" : "bg-emerald-100 text-emerald-700"
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+                  m.role === "user" ? "bg-slate-200 text-slate-600" : "bg-gradient-to-br from-emerald-100 to-cyan-50 text-emerald-600"
                 }`}>
-                  {m.role === "user" ? <User size={14} /> : <Bot size={16} />}
+                  {m.role === "user" ? <User size={18} /> : <Sparkles size={20} />}
                 </div>
-                {/* Bubble Chat */}
-                <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                  m.role === "user" ? "bg-slate-900 text-white rounded-tr-sm" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-sm"
+
+                {/* Bubble */}
+                <div className={`px-6 py-4 rounded-3xl text-[15px] leading-relaxed shadow-sm ${
+                  m.role === "user" 
+                    ? "bg-slate-800 text-white" 
+                    : "bg-white border border-slate-200 text-slate-700"
                 }`}>
-                  {m.text}
+                  <div className="whitespace-pre-wrap">{m.text}</div>
                 </div>
               </div>
             </div>
           ))
         )}
 
-        {/* Loading Indicator saat menjawab */}
+        {/* Busy State */}
         {busy && (
-          <div className="flex w-full justify-start">
-            <div className="flex max-w-[80%] gap-3">
-               <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                  <Bot size={16} />
+          <div className="flex w-full justify-start animate-in fade-in duration-300">
+            <div className="flex max-w-[80%] gap-4">
+               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-100 to-cyan-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
+                  <Sparkles size={20} />
                </div>
                <div className="flex flex-col justify-center">
-                 <div className="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 rounded-tl-sm flex items-center gap-2">
+                 <div className="px-6 py-5 rounded-3xl bg-white border border-slate-200 flex items-center gap-3 shadow-sm">
                    <LoaderAnimation />
-                   {statusText && <span className="text-xs text-slate-500 font-medium">{statusText}</span>}
+                   {statusText && <span className="text-sm text-slate-500 font-medium animate-pulse">{statusText}</span>}
                  </div>
                </div>
             </div>
@@ -213,41 +227,40 @@ export default function ChatPage() {
       </div>
 
       {err && (
-        <div className="px-6 py-2 bg-red-50 border-t border-red-100 flex items-center gap-2 text-sm text-red-600">
-          <AlertCircle size={16} />
+        <div className="px-6 py-3 bg-red-50 border-t border-red-100 flex items-center gap-3 text-sm text-red-600 animate-in slide-in-from-bottom-2">
+          <AlertCircle size={16} className="shrink-0" />
           {err}
         </div>
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t border-slate-200 bg-white">
-        <div className="relative flex flex-col gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:border-emerald-400 transition-all">
+      <div className="p-6 border-t border-slate-200 bg-white">
+        <div className="relative flex flex-col gap-3 bg-slate-50 border border-slate-200 rounded-3xl p-3 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:border-emerald-400 transition-all shadow-inner">
           
           {/* File Preview */}
           {selectedFile && (
-            <div className="mx-2 mt-1 flex items-center gap-2 self-start bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm animate-in fade-in slide-in-from-bottom-1">
-                <div className="bg-emerald-100 text-emerald-600 p-1 rounded"><File size={14} /></div>
-                <span className="text-xs font-medium text-slate-700 max-w-[200px] truncate">{selectedFile.name}</span>
+            <div className="mx-3 mt-2 flex items-center gap-3 self-start bg-white border border-slate-200 rounded-xl px-4 py-2 animate-in fade-in slide-in-from-bottom-1 shadow-sm">
+                <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg"><File size={16} /></div>
+                <span className="text-sm font-medium text-slate-700 max-w-[200px] truncate">{selectedFile.name}</span>
                 <button 
                     onClick={() => { setSelectedFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} 
-                    className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
+                    className="ml-3 text-slate-400 hover:text-red-500 transition-colors p-1 hover:bg-slate-100 rounded-full"
                 >
-                    <X size={14} />
+                    <X size={16} />
                 </button>
             </div>
           )}
 
-          {/* Text Input & Buttons */}
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2 px-2">
             <input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.txt,.md" onChange={handleFileSelect}/>
             
             <button 
                 onClick={() => fileInputRef.current?.click()} 
                 disabled={busy} 
-                className="mb-0.5 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors" 
+                className="p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-200 rounded-full transition-all" 
                 title="Attach file"
             >
-                <Paperclip size={20} />
+                <Paperclip size={22} />
             </button>
             
             <textarea
@@ -255,21 +268,30 @@ export default function ChatPage() {
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={busy}
-              placeholder={selectedFile ? "Add a message..." : "Type your question..."}
-              className="flex-1 bg-transparent border-none focus:ring-0 resize-none text-sm text-slate-900 placeholder:text-slate-400 max-h-32 py-2.5 px-2"
+              placeholder={selectedFile ? "Add a message about this file..." : "Message..."}
+              className="flex-1 bg-transparent border-none focus:ring-0 resize-none text-base text-slate-800 placeholder:text-slate-500 max-h-40 py-3 px-3"
               rows={1}
-              style={{ minHeight: "44px" }} 
+              style={{ minHeight: "56px" }} 
             />
             
             <Button 
                 disabled={busy || (!q.trim() && !selectedFile)} 
                 onClick={send} 
-                className={`shrink-0 mb-0.5 w-10 h-10 rounded-lg flex items-center justify-center transition-all ${busy || (!q.trim() && !selectedFile) ? "bg-slate-200 text-slate-400" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"}`} 
-                size="sm"
+                className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                    busy || (!q.trim() && !selectedFile) 
+                    ? "bg-slate-200 text-slate-400" 
+                    : "bg-slate-900 hover:bg-black text-white shadow-md hover:shadow-lg"
+                }`} 
+                size="icon"
             >
-              {busy ? <StopCircle size={18} /> : <Send size={18} className="ml-0.5" />}
+              {busy ? <StopCircle size={22} /> : <Send size={22} className="ml-0.5" />}
             </Button>
           </div>
+        </div>
+        <div className="text-center mt-3">
+          <p className="text-xs text-slate-400">
+             AI can make mistakes. Check important info.
+          </p>
         </div>
       </div>
     </div>
@@ -278,10 +300,10 @@ export default function ChatPage() {
 
 function LoaderAnimation() {
     return (
-        <div className="flex gap-1">
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+        <div className="flex gap-1.5 px-1">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></span>
         </div>
     );
 }
