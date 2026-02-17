@@ -13,7 +13,8 @@ model User {
   password  String
   createdAt DateTime @default(now())
 
-  documents Document[]
+  documents    Document[]
+  chatMessages ChatMessage[] // <--- TAMBAHAN: Relasi ke chat history
 }
 
 model Settings {
@@ -33,9 +34,9 @@ model Document {
   id           String   @id @default(uuid())
   userId       String   @map("user_id")
   title        String
-  type         String // "file" | "text"
+  type         String
   sourcePath   String?  @map("source_path")
-  status       String // "pending" | "indexing" | "indexed" | "failed"
+  status       String
   progress     Int      @default(0)
   errorMessage String?  @map("error_message")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -55,4 +56,18 @@ model RevokedToken {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+// --- MODEL BARU UNTUK HISTORY CHAT ---
+model ChatMessage {
+  id        String   @id @default(uuid())
+  role      String   // "user" | "assistant"
+  text      String   @db.Text // Text panjang aman
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("chat_messages")
 }
